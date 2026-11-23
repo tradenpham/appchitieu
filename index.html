@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#f6f5f2">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Chi tiêu">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<title>Chi tiêu</title>
+<style>
+  :root{
+    --bg:#f6f5f2; --card:#fff; --ink:#1d1d1f; --mute:#8a8a8e; --line:#e8e6e1;
+    --out:#e5484d; --in:#2f9e6b; --accent:#1d1d1f;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{--bg:#121212;--card:#1d1d1f;--ink:#f2f2f2;--mute:#9a9aa0;--line:#2c2c2e;--accent:#f2f2f2}
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  body{display:flex;justify-content:center}
+  .app{width:100%;max-width:440px;height:100%;display:flex;flex-direction:column}
+  .view{flex:1;overflow-y:auto;padding:calc(14px + env(safe-area-inset-top)) 14px 8px}
+  .hidden{display:none!important}
+
+  /* summary */
+  .sum{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+  .sum div{background:var(--card);border-radius:14px;padding:10px 12px}
+  .sum small{display:block;font-size:12px;color:var(--mute)}
+  .sum b{font-size:15px;font-variant-numeric:tabular-nums}
+  .c-out{color:var(--out)} .c-in{color:var(--in)}
+
+  /* toggle */
+  .seg{display:grid;grid-template-columns:1fr 1fr;background:var(--card);border-radius:12px;padding:4px;margin-bottom:10px}
+  .seg button{border:0;background:none;padding:10px;border-radius:9px;font-size:16px;font-weight:600;color:var(--mute)}
+  .seg button.on.out{background:var(--out);color:#fff}
+  .seg button.on.in{background:var(--in);color:#fff}
+
+  .amount{text-align:right;font-size:44px;font-weight:700;padding:6px 6px 10px;font-variant-numeric:tabular-nums;min-height:66px}
+  .amount .u{font-size:22px;color:var(--mute);margin-left:4px}
+  .amount.zero{color:var(--mute)}
+  .hint{text-align:right;font-size:12px;color:var(--mute);margin:-8px 6px 8px;min-height:15px}
+
+  .cats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
+  .cat{border:0;background:var(--card);border-radius:14px;padding:10px 2px;font-size:13px;color:var(--ink);
+    display:flex;flex-direction:column;align-items:center;gap:4px}
+  .cat span{font-size:26px;line-height:1}
+  .cat:active{transform:scale(.96)}
+  .cats.disabled .cat{opacity:.45}
+
+  .pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .pad button{border:0;background:var(--card);border-radius:14px;height:56px;font-size:24px;font-weight:500;color:var(--ink)}
+  .pad button:active{background:var(--line)}
+
+  /* history */
+  .mnav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .mnav button{border:0;background:var(--card);border-radius:10px;width:42px;height:38px;font-size:18px;color:var(--ink)}
+  .mnav b{font-size:17px}
+  .card{background:var(--card);border-radius:14px;padding:12px 14px;margin-bottom:12px}
+  .bar{margin:8px 0}
+  .bar .t{display:flex;justify-content:space-between;font-size:14px}
+  .bar .track{height:6px;background:var(--line);border-radius:3px;margin-top:4px;overflow:hidden}
+  .bar .fill{height:100%;background:var(--out);border-radius:3px}
+  .day{font-size:13px;color:var(--mute);margin:14px 2px 6px;display:flex;justify-content:space-between}
+  .row{display:flex;align-items:center;gap:10px;background:var(--card);padding:10px 12px;border-radius:12px;margin-bottom:6px}
+  .row .e{font-size:22px}
+  .row .n{flex:1;font-size:15px}
+  .row .n small{display:block;color:var(--mute);font-size:12px}
+  .row .a{font-weight:600;font-variant-numeric:tabular-nums}
+  .row .x{border:0;background:none;color:var(--mute);font-size:18px;padding:4px 6px}
+  .empty{text-align:center;color:var(--mute);padding:30px 0}
+
+  /* tabs */
+  .tabs{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--line);background:var(--card);
+    padding-bottom:env(safe-area-inset-bottom)}
+  .tabs button{border:0;background:none;padding:12px;font-size:15px;color:var(--mute);font-weight:600}
+  .tabs button.on{color:var(--ink)}
+
+  .toast{position:fixed;left:50%;bottom:76px;transform:translateX(-50%) translateY(20px);opacity:0;
+    background:#1d1d1f;color:#fff;padding:12px 14px;border-radius:12px;display:flex;gap:14px;align-items:center;
+    font-size:14px;transition:.2s;pointer-events:none;max-width:92%;z-index:5}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+  .toast button{white-space:nowrap;border:0;background:none;color:#7dd3fc;font-weight:700;font-size:14px}
+  .backup{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:18px 0 8px}
+  .backup button,.backup label{border:0;background:var(--card);border-radius:12px;padding:12px;font-size:14px;
+    color:var(--ink);text-align:center;font-weight:600}
+  .backup input{display:none}
+  .status{font-size:11px;color:var(--mute);text-align:center;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- NHẬP -->
+  <section class="view" id="vAdd">
+    <div class="sum">
+      <div><small>Thu tháng</small><b class="c-in" id="sIn">0</b></div>
+      <div><small>Chi tháng</small><b class="c-out" id="sOut">0</b></div>
+      <div><small>Còn lại</small><b id="sBal">0</b></div>
+    </div>
+    <div class="seg">
+      <button id="tOut" class="on out">Chi</button>
+      <button id="tIn" class="in">Thu</button>
+    </div>
+    <div class="amount zero" id="amt">0<span class="u">đ</span></div>
+    <div class="hint" id="hint">Gõ số tiền rồi chạm danh mục</div>
+    <div class="cats disabled" id="cats"></div>
+    <div class="pad" id="pad"></div>
+  </section>
+
+  <!-- LỊCH SỬ -->
+  <section class="view hidden" id="vHist">
+    <div class="mnav">
+      <button id="mPrev">‹</button><b id="mLabel"></b><button id="mNext">›</button>
+    </div>
+    <div class="sum">
+      <div><small>Thu</small><b class="c-in" id="hIn">0</b></div>
+      <div><small>Chi</small><b class="c-out" id="hOut">0</b></div>
+      <div><small>Còn lại</small><b id="hBal">0</b></div>
+    </div>
+    <div class="card" id="breakdown"></div>
+    <div id="list"></div>
+    <div class="backup">
+      <button id="exp">⬇︎ Xuất Excel (CSV)</button>
+      <label>⬆︎ Khôi phục<input type="file" id="imp" accept=".csv,text/csv"></label>
+    </div>
+    <div class="status" id="status">Dữ liệu lưu trên điện thoại này. Nên xuất sao lưu mỗi tháng.</div>
+  </section>
+
+  <nav class="tabs">
+    <button id="tabAdd" class="on">＋ Nhập</button>
+    <button id="tabHist">Lịch sử</button>
+  </nav>
+</div>
+<div class="toast" id="toast"><span id="toastMsg"></span><button id="undo">Hoàn tác</button></div>
+
+<script>
+const CATS = {
+  out: [["an","🍜","Ăn uống"],["caphe","☕","Cà phê"],["dilai","🛵","Đi lại"],["nguoiyeu","❤️","Người yêu"],
+        ["muasam","🛍️","Mua sắm"],["hoadon","🧾","Hoá đơn"],["giaitri","🎮","Giải trí"],["khac","📦","Khác"]],
+  in:  [["luong","💼","Lương"],["thuong","🎁","Thưởng"],["khacthu","💰","Thu khác"]]
+};
+const CAT_MAP = {}; Object.values(CATS).flat().forEach(c => CAT_MAP[c[0]] = c);
+
+let type = "out", digits = "", items = [], viewMonth = new Date();
+let lastSaved = null, toastTimer = null;
+
+
+const $ = id => document.getElementById(id);
+const fmt = n => Math.round(n).toLocaleString("vi-VN");
+const monthKey = d => d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0");
+
+/* ---------- Lưu trên điện thoại ---------- */
+const K = "chitieu.items";
+function load(){ try { items = JSON.parse(localStorage.getItem(K) || "[]"); } catch(e){ items = []; } }
+function save(){ try { localStorage.setItem(K, JSON.stringify(items)); } catch(e){ alertBox("Không lưu được trên máy"); } }
+const store = {
+  add: async it => { items.push(it); save(); render(); },
+  remove: async id => { items = items.filter(x => x.id !== id); save(); render(); }
+};
+function alertBox(t){ $("toastMsg").textContent = t; $("undo").style.display="none";
+  $("toast").classList.add("show"); clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{ $("toast").classList.remove("show"); $("undo").style.display=""; }, 3000); }
+
+/* ---------- Sao lưu ---------- */
+$("exp").onclick = () => {
+  const head = "Ngày,Giờ,Loại,Danh mục,Số tiền,id,ts";
+  const rows = items.slice().sort((a,b)=>a.ts-b.ts).map(x => {
+    const d = new Date(x.ts);
+    const day = `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
+    const tm = `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+    return [day, tm, x.type==="out"?"Chi":"Thu", (CAT_MAP[x.cat]||[,,x.cat])[2], x.amount, x.id, x.ts].join(",");
+  });
+  const blob = new Blob(["\ufeff" + [head, ...rows].join("\n")], {type:"text/csv;charset=utf-8"});
+  const a = document.createElement("a");
+  const n = new Date();
+  a.href = URL.createObjectURL(blob);
+  a.download = `chitieu-${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}-${String(n.getDate()).padStart(2,"0")}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
+};
+$("imp").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  const text = (await f.text()).replace(/^\ufeff/, "");
+  const lines = text.split(/\r?\n/).slice(1).filter(Boolean);
+  const nameToId = {}; Object.values(CAT_MAP).forEach(c => nameToId[c[2]] = c[0]);
+  const have = new Set(items.map(x => x.id)); let added = 0;
+  lines.forEach(l => {
+    const c = l.split(",");
+    if (c.length < 7) return;
+    const it = { id:c[5], type: c[2]==="Thu"?"in":"out", cat: nameToId[c[3]] || (c[2]==="Thu"?"khacthu":"khac"),
+                 amount: +c[4], ts: +c[6] };
+    if (!it.id || !it.amount || !it.ts || have.has(it.id)) return;
+    items.push(it); have.add(it.id); added++;
+  });
+  save(); render(); e.target.value = "";
+  alertBox(`Đã khôi phục ${added} khoản`);
+};
+
+/* ---------- Nhập ---------- */
+function buildPad(){
+  const keys = ["1","2","3","4","5","6","7","8","9","000","0","⌫"];
+  $("pad").innerHTML = keys.map(k => `<button data-k="${k}">${k}</button>`).join("");
+  $("pad").onclick = e => {
+    const k = e.target.dataset.k; if (!k) return;
+    if (k === "⌫") digits = digits.slice(0,-1);
+    else if (digits.length < 12) digits = (digits + k).replace(/^0+/, "");
+    showAmount();
+  };
+}
+function buildCats(){
+  $("cats").innerHTML = CATS[type].map(([id,e,n]) =>
+    `<button class="cat" data-c="${id}"><span>${e}</span>${n}</button>`).join("");
+}
+$("cats").onclick = async e => {
+  const b = e.target.closest(".cat"); if (!b) return;
+  const amt = parseInt(digits || "0", 10);
+  if (!amt){ flashHint("Gõ số tiền trước nhé"); return; }
+  const it = { id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+               type, cat: b.dataset.c, amount: amt, ts: Date.now() };
+  digits = ""; showAmount();
+  lastSaved = it;
+  showToast(`${type==="out"?"−":"+"}${fmt(amt)}đ · ${CAT_MAP[it.cat][2]}`);
+  try { await store.add(it); } catch(err){ flashHint("Lưu không được, thử lại"); }
+};
+function showAmount(){
+  const n = parseInt(digits || "0", 10);
+  $("amt").innerHTML = fmt(n) + '<span class="u">đ</span>';
+  $("amt").classList.toggle("zero", !n);
+  $("amt").style.color = n ? (type==="out" ? "var(--out)" : "var(--in)") : "";
+  $("cats").classList.toggle("disabled", !n);
+  $("hint").textContent = n ? "Chạm danh mục để lưu" : "Gõ số tiền rồi chạm danh mục";
+}
+function flashHint(t){ $("hint").textContent = t; }
+function setType(t){
+  type = t;
+  $("tOut").className = "out" + (t==="out" ? " on" : "");
+  $("tIn").className = "in" + (t==="in" ? " on" : "");
+  buildCats(); showAmount();
+}
+$("tOut").onclick = () => setType("out");
+$("tIn").onclick = () => setType("in");
+
+function showToast(msg){
+  $("toastMsg").textContent = msg;
+  $("toast").classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $("toast").classList.remove("show"), 3500);
+}
+$("undo").onclick = async () => {
+  $("toast").classList.remove("show");
+  if (lastSaved){ const id = lastSaved.id; lastSaved = null; await store.remove(id); }
+};
+
+/* ---------- Tổng hợp ---------- */
+function totals(list){
+  let i = 0, o = 0;
+  list.forEach(x => x.type === "in" ? i += x.amount : o += x.amount);
+  return { i, o, b: i - o };
+}
+function inMonth(d){ const k = monthKey(d); return items.filter(x => monthKey(new Date(x.ts)) === k); }
+
+function render(){
+  const t = totals(inMonth(new Date()));
+  $("sIn").textContent = fmt(t.i); $("sOut").textContent = fmt(t.o);
+  $("sBal").textContent = fmt(t.b); $("sBal").className = t.b < 0 ? "c-out" : "";
+  renderHist();
+}
+
+function renderHist(){
+  const list = inMonth(viewMonth).sort((a,b) => b.ts - a.ts);
+  $("mLabel").textContent = "Tháng " + (viewMonth.getMonth()+1) + "/" + viewMonth.getFullYear();
+  const t = totals(list);
+  $("hIn").textContent = fmt(t.i); $("hOut").textContent = fmt(t.o);
+  $("hBal").textContent = fmt(t.b); $("hBal").className = t.b < 0 ? "c-out" : "";
+
+  // chi theo danh mục
+  const by = {};
+  list.filter(x => x.type === "out").forEach(x => by[x.cat] = (by[x.cat]||0) + x.amount);
+  const rows = Object.entries(by).sort((a,b) => b[1]-a[1]);
+  $("breakdown").innerHTML = rows.length
+    ? "<b style='font-size:14px'>Chi theo danh mục</b>" + rows.map(([c,v]) => {
+        const [,e,n] = CAT_MAP[c] || [c,"📦",c];
+        return `<div class="bar"><div class="t"><span>${e} ${n}</span><span>${fmt(v)}đ · ${Math.round(v/t.o*100)}%</span></div>
+                <div class="track"><div class="fill" style="width:${v/t.o*100}%"></div></div></div>`;
+      }).join("")
+    : "<div class='empty' style='padding:8px 0'>Chưa có khoản chi nào tháng này</div>";
+  $("breakdown").classList.toggle("hidden", false);
+
+  // danh sách theo ngày
+  if (!list.length){ $("list").innerHTML = ""; return; }
+  const days = {};
+  list.forEach(x => { const d = new Date(x.ts); const k = d.toDateString(); (days[k] = days[k] || []).push(x); });
+  const today = new Date().toDateString(), yest = new Date(Date.now()-864e5).toDateString();
+  $("list").innerHTML = Object.entries(days).map(([k, arr]) => {
+    const d = new Date(k);
+    const label = k === today ? "Hôm nay" : k === yest ? "Hôm qua" : `${d.getDate()}/${d.getMonth()+1}`;
+    const dt = totals(arr);
+    return `<div class="day"><span>${label}</span><span>${dt.o ? "−"+fmt(dt.o) : ""}${dt.i ? "  +"+fmt(dt.i) : ""}</span></div>` +
+      arr.map(x => {
+        const [,e,n] = CAT_MAP[x.cat] || [x.cat,"📦",x.cat];
+        const tm = new Date(x.ts).toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"});
+        return `<div class="row"><span class="e">${e}</span><span class="n">${n}<small>${tm}</small></span>
+          <span class="a ${x.type==="out"?"c-out":"c-in"}">${x.type==="out"?"−":"+"}${fmt(x.amount)}</span>
+          <button class="x" data-del="${x.id}" aria-label="Xoá">✕</button></div>`;
+      }).join("");
+  }).join("");
+}
+let pendingDel = null;
+$("list").onclick = async e => {
+  const b = e.target.closest("[data-del]"); if (!b) return;
+  // chạm 2 lần để xoá, tránh xoá nhầm
+  if (pendingDel !== b.dataset.del){
+    pendingDel = b.dataset.del; b.textContent = "Xoá?"; b.style.color = "var(--out)";
+    setTimeout(() => { if (pendingDel === b.dataset.del){ pendingDel = null; b.textContent = "✕"; b.style.color = ""; } }, 2500);
+    return;
+  }
+  pendingDel = null; await store.remove(b.dataset.del);
+};
+$("mPrev").onclick = () => { viewMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth()-1, 1); renderHist(); };
+$("mNext").onclick = () => { viewMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth()+1, 1); renderHist(); };
+
+/* ---------- Tabs ---------- */
+function tab(which){
+  $("vAdd").classList.toggle("hidden", which !== "add");
+  $("vHist").classList.toggle("hidden", which !== "hist");
+  $("tabAdd").classList.toggle("on", which === "add");
+  $("tabHist").classList.toggle("on", which === "hist");
+  if (which === "hist"){ viewMonth = new Date(); renderHist(); }
+}
+$("tabAdd").onclick = () => tab("add");
+$("tabHist").onclick = () => tab("hist");
+
+load(); buildPad(); buildCats(); showAmount(); render();
+if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(()=>{});
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
